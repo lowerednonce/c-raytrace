@@ -7,9 +7,9 @@
 
 const int WIDTH  = 500;
 const int HEIGHT = 500;
-const int FOCAL_LENGHT = 30;
+const int FOCAL_LENGHT = 50;
 const int SAMPLE_RATE = 1;
-const int MAX_STEPS = 3;
+const int MAX_STEPS = 1;
 
 typedef struct {
     double x;
@@ -48,6 +48,7 @@ typedef struct {
     vect3 normal;
     sphere object;
 } intersection;
+
 
 double mod(vect3 vec) {
     return sqrt(pow(vec.x, 2) + pow(vec.y, 2) + pow(vec.z, 2));
@@ -91,24 +92,20 @@ intersection sphere_intersection(vect3 origin, vect3 ray_direction, sphere spher
     bool collided = false;
     intersection* intersections = (intersection*) malloc((sphere_count+1)*sizeof(intersection));
     // set last element to be the fallback in case there is no intersection
-    intersections[sphere_count] = (intersection) {
-        false,
-        (vect3) {0,0,0},
-        0,
-        (vect3) {0,0,0},
-        (vect3) {0,0,0} // this is a sphere, this should not work BEWARE
-    };
+    intersection false_intersection;
+    false_intersection.collided = false;
+    intersections[sphere_count] = false_intersection; 
     int closest_object_index = sphere_count;
     double closest_intersection = 0;
 
 
-    for (int i = 0; i < sphere_count; ++i) {
+    for (unsigned int i = 0; i < sphere_count; ++i) {
         vect3 ray_sphere = sub(spheres[i].pos, origin);
         double dist_sphere = mod(ray_sphere);
         double dist_hit = dot(ray_sphere, ray_direction);
-        double dist_sphere_hit = sqrt(abs(pow(dist_sphere, 2) - pow(dist_hit, 2) ));
+        double dist_sphere_hit = sqrt(fabs(pow(dist_sphere, 2) - pow(dist_hit, 2) ));
 
-        double dist_intersection = dist_hit - sqrt(abs(pow(spheres[i].radius, 2) - pow(dist_sphere_hit, 2)));
+        double dist_intersection = dist_hit - sqrt(fabs(pow(spheres[i].radius, 2) - pow(dist_sphere_hit, 2)));
         vect3 point = add(origin, mult(ray_direction, dist_intersection));
         vect3 normal = norm(sub(point, spheres[i].pos)); 
         normal = norm(add(normal, mult(gen_rand(), spheres[i].material.roughness)));
@@ -157,8 +154,8 @@ bool ppm_save(vect3_i pixmap[WIDTH][HEIGHT], const char* fname) {
         return false;
     }
     fprintf(file, "P3\n%d %d\n255\n", HEIGHT, WIDTH);
-    for (int i = 0; i < WIDTH; ++i) {
-        for (int j = 0; j < HEIGHT; ++j) {
+    for (int i = 0; i < HEIGHT; ++i) {
+        for (int j = 0; j < WIDTH; ++j) {
             fprintf(file, "%d %d %d\n", pixmap[i][j].x, pixmap[i][j].y, pixmap[i][j].z);
         }
     }
@@ -166,7 +163,7 @@ bool ppm_save(vect3_i pixmap[WIDTH][HEIGHT], const char* fname) {
 
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     srand((unsigned int)time(NULL));
 
     // init objects
@@ -222,10 +219,10 @@ int main(int argc, char* argv[]) {
 
     unsigned int sphere_count = sizeof(spheres)/sizeof(sphere);
 
-    for (int i = 0; i < WIDTH; ++i) {
-        for (int j = 0; j < HEIGHT; ++j) {
-            double x = i - (WIDTH/2);
-            double y = j - (HEIGHT/2);
+    for (int i = 0; i < HEIGHT; ++i) {
+        for (int j = 0; j < WIDTH; ++j) {
+            double x = j - (HEIGHT/2);
+            double y = i - (WIDTH/2);
 
             vect3 direction = (vect3) {x,y,FOCAL_LENGHT};
             direction = norm(direction);
