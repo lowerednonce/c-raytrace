@@ -7,8 +7,8 @@
 
 const int WIDTH  = 500;
 const int HEIGHT = 500;
-const int FOCAL_LENGHT = 50;
-const int SAMPLE_RATE = 25;
+const int FOCAL_LENGHT = 30;
+const int SAMPLE_RATE = 1;
 const int MAX_STEPS = 3;
 
 typedef struct {
@@ -113,22 +113,25 @@ intersection sphere_intersection(vect3 origin, vect3 ray_direction, sphere spher
         vect3 normal = norm(sub(point, spheres[i].pos)); 
         normal = norm(add(normal, mult(gen_rand(), spheres[i].material.roughness)));
 
+        intersections[i] = (intersection) {
+            false,
+            point,
+            dist_intersection,
+            normal,
+            spheres[i]
+        };
         if (dist_hit > 0 && dist_sphere_hit < spheres[i].radius) {
             collided |= true;
             if (closest_intersection == 0 || dist_intersection < closest_intersection) {
                 closest_intersection = dist_intersection;
                 closest_object_index = i;
             }
-            intersections[i] = (intersection) {
-                true,
-                point,
-                dist_intersection,
-                normal,
-                spheres[i]
-            };
+            intersections[i].collided = true;
         }
     }
-    return intersections[closest_object_index];
+    intersection result_intersection = intersections[closest_object_index];
+    free(intersections);
+    return result_intersection;
 }
 
 vect3 draw(vect3 origin, vect3 ray_direction, sphere spheres[], unsigned int sphere_count, int steps) {
@@ -146,7 +149,6 @@ vect3 draw(vect3 origin, vect3 ray_direction, sphere spheres[], unsigned int sph
         result = add(intersect.object.material.base_color, extra);
     }
     return result;
-
 }
 
 bool ppm_save(vect3_i pixmap[WIDTH][HEIGHT], const char* fname) {
@@ -154,19 +156,10 @@ bool ppm_save(vect3_i pixmap[WIDTH][HEIGHT], const char* fname) {
     if (!file) {
         return false;
     }
-    fprintf(file, "P6\n%d %d\n255\n", HEIGHT, WIDTH);
-    char buffer[3];
+    fprintf(file, "P3\n%d %d\n255\n", HEIGHT, WIDTH);
     for (int i = 0; i < WIDTH; ++i) {
         for (int j = 0; j < HEIGHT; ++j) {
-            /* fprintf("%d", pixmap[i][j].x); */
-            /* fprintf("%d", pixmap[i][j].y); */
-            /* fprintf("%d\n", pixmap[i][j].z); */
-            snprintf(buffer, sizeof(buffer), "%d", pixmap[i][j].x);
-            fwrite(buffer, sizeof(char), strlen(buffer), file);
-            snprintf(buffer, sizeof(buffer), "%d", pixmap[i][j].y);
-            fwrite(buffer, sizeof(char), strlen(buffer), file);
-            snprintf(buffer, sizeof(buffer), "%d", pixmap[i][j].z);
-            fwrite(buffer, sizeof(char), strlen(buffer), file);
+            fprintf(file, "%d %d %d\n", pixmap[i][j].x, pixmap[i][j].y, pixmap[i][j].z);
         }
     }
     return true;
@@ -189,11 +182,11 @@ int main(int argc, char* argv[]) {
     };
     spheres[1] = (sphere) {
         (vect3) {-10,0,20},
-        30,
+        10,
         (material) {
-            (vect3) {255,0,0},
+            (vect3) {0,100,0},
             (vect3) {1,1,1},
-            0
+            2
         }
     };
     spheres[2] = (sphere) {
@@ -241,7 +234,7 @@ int main(int argc, char* argv[]) {
             vect3 result;
             for (int sample = 0; sample < SAMPLE_RATE; ++sample) {
                 result = draw(origin, direction, spheres, sphere_count, MAX_STEPS);
-                col = add(col, result);
+                col = add(result, col);
             }
             col = mult(col, 1/SAMPLE_RATE);
             pixmap[i][j] = (vect3_i) {round(col.x), round(col.y), round(col.z)}; 
